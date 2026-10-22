@@ -1,0 +1,450 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum UniversityType {
+  IIT
+  NIT
+  IIIT
+  BITS
+  GOVERNMENT
+  PRIVATE
+  DEEMED
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum FeeSlipFileType {
+  PDF
+  IMAGE
+}
+
+enum CertificateStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum CostSourceType {
+  OFFICIAL
+  CURATED
+}
+
+enum OutcomeSourceType {
+  OFFICIAL
+  GOVT_SURVEY
+  ALUMNI_SURVEY
+  CROWDSOURCED
+}
+
+enum EmploymentType {
+  SALARIED_PRIVATE
+  SALARIED_GOVT
+  SELF_EMPLOYED
+  BUSINESS
+  STUDENT
+  NOT_EMPLOYED
+}
+
+enum ConsentStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  REVOKED
+  FAILED
+}
+
+enum ApprovalStatus {
+  PRE_APPROVED
+  CONDITIONAL
+  DECLINED
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  clerkId              String    @unique
+  email                String    @unique
+  fullName             String
+  phone                String?
+  role                 UserRole  @default(STUDENT)
+  kycStatus            KycStatus @default(NOT_STARTED)
+  kycPanLast4          String?
+  kycAadhaarLast4      String?
+  kycVerifiedAt        DateTime?
+  onboardingCompleted  Boolean   @default(false)
+  targetUniversityId   String?
+  targetProgramId      String?
+  targetLoanAmount     Int?
+  familyIncomeAnnual   Int?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  targetUniversity University? @relation("UserTargetUniversity", fields: [targetUniversityId], references: [id], onDelete: SetNull)
+  targetProgram    Program?    @relation("UserTargetProgram", fields: [targetProgramId], references: [id], onDelete: SetNull)
+
+  feeSlips         FeeSlip[]         @relation("FeeSlipSubmitter")
+  reviewedFeeSlips FeeSlip[]         @relation("FeeSlipReviewer")
+  certificates     Certificate[]
+  consents         AAConsent[]
+  financialProfiles FinancialProfile[]
+  loanPreApprovals LoanPreApproval[]
+  riskRuns         RiskRun[]
+  auditLogs        AuditLog[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model University {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  name         String
+  shortName    String
+  type         UniversityType
+  city         String
+  state        String
+  nirfRank     Int?
+  established  Int
+  website      String
+  description  String
+  accreditation String        @default("UGC recognised")
+  logoInitials String
+  accentColor  String
+  verified     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  programs     Program[]
+  feeSlips     FeeSlip[]
+  certificates Certificate[]
+  outcomes     OutcomeData[]
+  loanPreApprovals LoanPreApproval[]
+  riskRuns     RiskRun[]
+  targetedByUsers User[]      @relation("UserTargetUniversity")
+
+  @@index([state])
+  @@index([type])
+  @@index([name])
+  @@map("universities")
+}
+
+model Program {
+  id             String   @id @default(cuid())
+  universityId   String
+  name           String
+  degree         String
+  discipline     String
+  durationMonths Int
+  seats          Int
+  stem           Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  university     University        @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  costSchedules  CostSchedule[]
+  feeSlips       FeeSlip[]
+  certificates   Certificate[]
+  outcomes       OutcomeData[]
+  loanPreApprovals LoanPreApproval[]
+  riskRuns       RiskRun[]
+  targetedByUsers User[]           @relation("UserTargetProgram")
+
+  @@unique([universityId, name, degree])
+  @@index([universityId])
+  @@index([discipline])
+  @@map("programs")
+}
+
+model CostSchedule {
+  id           String         @id @default(cuid())
+  programId    String
+  academicYear String
+  tuition      Int
+  hostel       Int
+  mess         Int
+  oneTime      Int
+  other        Int
+  sourceLabel  String
+  sourceType   CostSourceType @default(CURATED)
+  verified     Boolean        @default(false)
+  effectiveFrom DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, academicYear])
+  @@index([programId])
+  @@map("cost_schedules")
+}
+
+model FeeSlip {
+  id                String             @id @default(cuid())
+  userId            String
+  universityId      String
+  programId         String?
+  academicYear      String
+  tuition           Int
+  hostel            Int                @default(0)
+  mess              Int                @default(0)
+  oneTime           Int                @default(0)
+  other             Int                @default(0)
+  total             Int
+  filePath          String
+  fileName          String
+  fileType          FeeSlipFileType
+  mimeType          String
+  receiptNumber     String?
+  notes             String?
+  status            VerificationStatus @default(PENDING)
+  kycStatus         KycStatus          @default(NOT_STARTED)
+  verificationNotes String?
+  reviewedById      String?
+  reviewedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  user       User       @relation("FeeSlipSubmitter", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User?      @relation("FeeSlipReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  university University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  program    Program?   @relation(fields: [programId], references: [id], onDelete: SetNull)
+
+  @@index([universityId, status])
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("fee_slips")
+}
+
+model Certificate {
+  id              String            @id @default(cuid())
+  userId          String
+  universityId    String
+  programId       String
+  verificationCode String           @unique
+  status          CertificateStatus @default(ACTIVE)
+  grandTotal      Int
+  confidenceScore Float
+  snapshot        Json
+  issuedAt        DateTime          @default(now())
+  expiresAt       DateTime
+  downloadCount   Int               @default(0)
+  createdAt       DateTime          @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  university University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([verificationCode])
+  @@map("certificates")
+}
+
+model AAConsent {
+  id              String        @id @default(cuid())
+  userId          String
+  consentHandle   String        @unique
+  status          ConsentStatus @default(PENDING)
+  purpose         String
+  durationMonths  Int
+  dataRangeMonths Int
+  fiTypes         String[]
+  accounts        Json
+  createdAt       DateTime      @default(now())
+  approvedAt      DateTime?
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  lastFetchedAt   DateTime?
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  financialProfile FinancialProfile?
+
+  @@index([userId, status])
+  @@map("aa_consents")
+}
+
+model FinancialProfile {
+  id                 String         @id @default(cuid())
+  userId             String
+  consentId          String         @unique
+  monthlyIncome      Int
+  monthlyExpenses    Int
+  existingEmi        Int
+  creditScore        Int
+  employmentType     EmploymentType
+  employer           String?
+  bankName           String
+  accountMasked      String
+  averageBalance     Int
+  salaryCredits      Int
+  dataQuality        Float
+  incomeSources      Json
+  monthlySeries      Json
+  flags              String[]
+  verifiedAt         DateTime       @default(now())
+  createdAt          DateTime       @default(now())
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consent AAConsent @relation(fields: [consentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("financial_profiles")
+}
+
+model Bank {
+  id           String @id @default(cuid())
+  name         String @unique
+  code         String @unique
+  logoInitials String
+  accentColor  String
+  website      String
+  createdAt    DateTime @default(now())
+
+  policies BankPolicy[]
+
+  @@map("banks")
+}
+
+model BankPolicy {
+  id                      String          @id @default(cuid())
+  bankId                  String
+  productName             String
+  minCreditScore          Int
+  maxFoir                 Float
+  minMonthlyIncome        Int
+  maxLoanAmount           Int
+  minTenureMonths         Int
+  maxTenureMonths         Int
+  baseRate                Float
+  maxRate                 Float
+  requiresCoApplicant     Boolean         @default(false)
+  allowedEmploymentTypes  EmploymentType[]
+  maxLtv                  Float           @default(1)
+  processingFeePct        Float           @default(0.5)
+  collateralRequiredAbove Int?
+  active                  Boolean         @default(true)
+  notes                   String[]
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  bank             Bank            @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  loanPreApprovals LoanPreApproval[]
+
+  @@unique([bankId, productName])
+  @@index([active])
+  @@map("bank_policies")
+}
+
+model LoanPreApproval {
+  id                   String         @id @default(cuid())
+  userId               String
+  bankPolicyId         String
+  runId                String
+  universityId         String
+  programId            String
+  requestedAmount      Int
+  approvedAmount       Int
+  interestRate         Float
+  tenureMonths         Int
+  emi                  Int
+  totalInterest        Int
+  processingFee        Int
+  confidence           Float
+  reasons              String[]
+  conditions           String[]
+  foir                 Float
+  collateralRequired   Boolean        @default(false)
+  coApplicantRequired  Boolean        @default(false)
+  status               ApprovalStatus
+  notes                String[]
+  expiresAt            DateTime?
+  createdAt            DateTime       @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankPolicy BankPolicy @relation(fields: [bankPolicyId], references: [id], onDelete: Cascade)
+  university University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([runId])
+  @@map("loan_pre_approvals")
+}
+
+model OutcomeData {
+  id                String            @id @default(cuid())
+  universityId      String
+  programId         String
+  year              Int
+  sourceType        OutcomeSourceType
+  sourceLabel       String
+  sampleSize        Int
+  placementRate     Float
+  medianSalary      Int
+  p25Salary         Int
+  p75Salary         Int
+  topRecruiters     String[]
+  aiExposureIndex   Float             @default(0.4)
+  confidence        Float
+  notes             String?
+  createdAt         DateTime          @default(now())
+
+  university University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, year, sourceType, sourceLabel])
+  @@index([programId])
+  @@map("outcome_data")
+}
+
+model RiskRun {
+  id           String   @id @default(cuid())
+  userId       String
+  universityId String
+  programId    String
+  seed         Int
+  inputs       Json
+  results      Json
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  university University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("risk_runs")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}

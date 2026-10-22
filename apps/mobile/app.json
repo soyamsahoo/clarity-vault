@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Clarity Vault",
+    "slug": "clarity-vault",
+    "scheme": "clarityvault",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5F1E7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.clarityvault.app"
+    },
+    "android": {
+      "package": "in.clarityvault.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F5F1E7",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "Clarity Vault",
+      "shortName": "Clarity",
+      "themeColor": "#0B1F1C",
+      "backgroundColor": "#F5F1E7"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F1E7",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160
+        }
+      ],
+      "expo-font",
+      "expo-document-picker",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

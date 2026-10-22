@@ -1,0 +1,38 @@
+{
+  "name": "@clarity/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --external @prisma/client --clean",
+    "dev": "tsup src/index.ts --format cjs --dts --external @prisma/client --watch",
+    "generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma db push --force-reset && prisma db seed",
+    "db:start": "tsx scripts/dev-db.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src prisma scripts"
+  },
+  "dependencies": {
+    "@clarity/utils": "workspace:*",
+    "@prisma/client": "6.19.0"
+  },
+  "devDependencies": {
+    "@clarity/config": "workspace:*",
+    "@clarity/types": "workspace:*",
+    "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "^9.18.0",
+    "pg": "^8.13.1",
+    "prisma": "6.19.0",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "~6.0.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

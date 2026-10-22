@@ -1,0 +1,39 @@
+{
+  "name": "clarity-vault",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Clarity Vault — verified education cost certainty for Indian STEM students",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:api": "pnpm --filter @clarity/api dev",
+    "dev:mobile": "pnpm --filter @clarity/mobile dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,prisma,css}\"",
+    "db:start": "pnpm --filter @clarity/database db:start",
+    "db:push": "pnpm --filter @clarity/database db:push",
+    "db:migrate": "pnpm --filter @clarity/database db:migrate",
+    "db:seed": "pnpm --filter @clarity/database db:seed",
+    "db:studio": "pnpm --filter @clarity/database db:studio",
+    "db:generate": "pnpm --filter @clarity/database generate",
+    "db:reset": "pnpm --filter @clarity/database db:reset",
+    "setup": "pnpm install && pnpm db:generate && pnpm db:push && pnpm db:seed",
+    "postinstall": "pnpm db:generate && pnpm --filter @clarity/types build && pnpm --filter @clarity/utils build && pnpm --filter @clarity/database build"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.11.10",
+    "typescript": "~6.0.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "~6.0.3"
+    }
+  }
+}
